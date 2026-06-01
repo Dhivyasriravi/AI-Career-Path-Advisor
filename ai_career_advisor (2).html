@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI Career Path Advisor | Dhivyasri Ravi</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --np: #b48bff; --npk: #ff6eb4; --nb: #5edfff; --ng: #39ff9c;
+      --bg: #05050f; --bg2: #0a0a1a; --bg3: #0f0f22;
+      --card: rgba(255,255,255,0.04); --border: rgba(180,139,255,0.18);
+      --text: #e8e8f8; --muted: #7a7a9a;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+    #galaxy-canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+
+    /* HEADER */
+    header { position: relative; z-index: 1; text-align: center; padding: 2.5rem 1.5rem 1rem; }
+    header h1 { font-size: clamp(24px,5vw,40px); font-weight: 900; background: linear-gradient(135deg,#fff 20%,var(--np) 60%,var(--npk)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin-bottom:.4rem; }
+    header p { font-size:13px; color:var(--muted); margin-bottom:.7rem; }
+    .author-tag { display:inline-block; font-size:11px; background:rgba(180,139,255,.1); color:var(--np); padding:4px 14px; border-radius:999px; border:1px solid rgba(180,139,255,.3); }
+
+    /* MAIN */
+    .main { position:relative; z-index:1; max-width:860px; margin:0 auto; padding:1.5rem 1.5rem 4rem; }
+
+    /* PROGRESS BAR */
+    .progress-wrap { margin-bottom:2rem; }
+    .progress-steps { display:flex; justify-content:space-between; margin-bottom:.6rem; }
+    .pstep { display:flex; flex-direction:column; align-items:center; gap:4px; flex:1; }
+    .pstep-dot { width:28px; height:28px; border-radius:50%; background:var(--card); border:2px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:var(--muted); transition:all .3s; }
+    .pstep-dot.active { background:linear-gradient(135deg,var(--np),var(--npk)); border-color:transparent; color:#fff; box-shadow:0 0 16px rgba(180,139,255,.5); }
+    .pstep-dot.done { background:rgba(57,255,156,.15); border-color:var(--ng); color:var(--ng); }
+    .pstep-label { font-size:10px; color:var(--muted); text-align:center; }
+    .pstep-label.active { color:var(--np); font-weight:600; }
+    .progress-bar-track { height:3px; background:var(--card); border-radius:999px; overflow:hidden; }
+    .progress-bar-fill { height:100%; background:linear-gradient(90deg,var(--np),var(--npk)); border-radius:999px; transition:width .5s ease; }
+
+    /* CARDS */
+    .card { background:var(--card); border:1px solid var(--border); border-radius:20px; padding:2rem; margin-bottom:1.2rem; }
+    .card-title { font-size:18px; font-weight:800; color:#fff; margin-bottom:.4rem; }
+    .card-sub { font-size:13px; color:var(--muted); margin-bottom:1.5rem; line-height:1.6; }
+
+    /* QUIZ */
+    .q-label { font-size:13px; font-weight:700; color:var(--np); text-transform:uppercase; letter-spacing:.08em; margin-bottom:8px; }
+    .q-title { font-size:16px; font-weight:700; color:#fff; margin-bottom:1rem; line-height:1.5; }
+    .options-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:10px; margin-bottom:1.2rem; }
+    .opt-btn {
+      padding:12px 16px; border-radius:12px; background:var(--card);
+      border:1px solid var(--border); color:var(--muted); font-size:13px;
+      font-weight:500; cursor:pointer; transition:all .25s; text-align:left;
+      display:flex; align-items:center; gap:8px;
+    }
+    .opt-btn:hover { border-color:var(--np); color:var(--np); background:rgba(180,139,255,.08); transform:translateY(-2px); }
+    .opt-btn.selected { background:linear-gradient(135deg,rgba(123,93,232,.25),rgba(212,83,126,.25)); border-color:var(--np); color:#fff; box-shadow:0 0 14px rgba(180,139,255,.2); }
+    .opt-btn.multi-selected { background:rgba(57,255,156,.08); border-color:var(--ng); color:var(--ng); }
+
+    .text-input {
+      width:100%; font-size:14px; padding:12px 16px; border-radius:12px;
+      border:1px solid var(--border); background:rgba(255,255,255,.03);
+      color:var(--text); outline:none; font-family:inherit;
+      transition:border-color .2s; margin-bottom:1rem;
+    }
+    .text-input:focus { border-color:var(--np); box-shadow:0 0 12px rgba(180,139,255,.15); }
+    textarea.text-input { min-height:90px; resize:vertical; line-height:1.7; }
+
+    .nav-btns { display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; }
+    .btn-back { padding:10px 22px; border-radius:10px; background:var(--card); border:1px solid var(--border); color:var(--muted); font-size:14px; font-weight:600; cursor:pointer; transition:all .2s; }
+    .btn-back:hover { border-color:var(--np); color:var(--np); }
+    .btn-next { padding:10px 28px; border-radius:10px; background:linear-gradient(135deg,#7b5de8,#d4537e); color:#fff; font-size:14px; font-weight:700; border:none; cursor:pointer; box-shadow:0 0 18px rgba(180,139,255,.35); transition:all .3s; }
+    .btn-next:hover { transform:translateY(-2px); box-shadow:0 0 28px rgba(180,139,255,.55); }
+    .btn-next:disabled { opacity:.5; cursor:not-allowed; transform:none; }
+
+    /* LOADING SCREEN */
+    #loading-screen { display:none; text-align:center; padding:4rem 2rem; }
+    .loader-orb { width:80px; height:80px; border-radius:50%; border:3px solid transparent; border-top-color:var(--np); border-right-color:var(--npk); animation:spin .9s linear infinite; margin:0 auto 1.5rem; box-shadow:0 0 30px rgba(180,139,255,.3); }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    #loading-screen h2 { font-size:20px; font-weight:700; color:#fff; margin-bottom:.5rem; }
+    #loading-screen p { font-size:13px; color:var(--muted); }
+    .loading-steps { margin-top:1.5rem; display:flex; flex-direction:column; gap:8px; }
+    .lstep { font-size:12px; color:var(--muted); display:flex; align-items:center; gap:8px; justify-content:center; }
+    .lstep.done { color:var(--ng); }
+    .lstep.active { color:var(--np); }
+
+    /* RESULTS */
+    #results-screen { display:none; }
+    .result-hero { text-align:center; padding:1.5rem 1rem 1rem; margin-bottom:1.2rem; }
+    .result-hero h2 { font-size:clamp(20px,4vw,30px); font-weight:900; background:linear-gradient(135deg,#fff,var(--np),var(--npk)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin-bottom:.5rem; }
+    .result-hero p { font-size:14px; color:var(--muted); max-width:500px; margin:0 auto; line-height:1.7; }
+
+    /* ROLE CARDS */
+    .roles-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; margin-bottom:1.2rem; }
+    .role-card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:1.1rem; transition:all .3s; }
+    .role-card:hover { border-color:var(--np); transform:translateY(-4px); box-shadow:0 0 20px rgba(180,139,255,.15); }
+    .role-card.top { border-color:rgba(180,139,255,.4); background:linear-gradient(135deg,rgba(123,93,232,.12),rgba(212,83,126,.12)); }
+    .role-emoji { font-size:24px; margin-bottom:6px; }
+    .role-name { font-size:14px; font-weight:700; color:#fff; margin-bottom:3px; }
+    .role-match { font-size:11px; color:var(--ng); font-weight:600; }
+    .role-desc { font-size:12px; color:var(--muted); margin-top:5px; line-height:1.5; }
+    .role-salary { font-size:11px; color:var(--np); margin-top:5px; font-weight:500; }
+
+    /* ROADMAP */
+    .roadmap { position:relative; padding-left:2rem; }
+    .roadmap::before { content:''; position:absolute; left:0; top:0; bottom:0; width:2px; background:linear-gradient(to bottom,var(--np),var(--npk),rgba(180,139,255,.1)); border-radius:2px; }
+    .rm-phase { position:relative; margin-bottom:1.4rem; }
+    .rm-dot { position:absolute; left:-2.42rem; top:8px; width:14px; height:14px; border-radius:50%; background:var(--np); box-shadow:0 0 14px var(--np); border:2px solid var(--bg); }
+    .rm-card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:1.1rem 1.3rem; transition:all .3s; }
+    .rm-card:hover { border-color:var(--np); box-shadow:0 0 18px rgba(180,139,255,.1); }
+    .rm-phase-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:var(--np); margin-bottom:4px; }
+    .rm-title { font-size:14px; font-weight:700; color:#fff; margin-bottom:6px; }
+    .rm-items { list-style:none; }
+    .rm-items li { font-size:12px; color:#aaa; padding-left:14px; position:relative; margin-bottom:4px; line-height:1.6; }
+    .rm-items li::before { content:'›'; position:absolute; left:0; color:var(--npk); font-weight:700; }
+    .rm-duration { display:inline-block; margin-top:8px; font-size:11px; background:rgba(180,139,255,.1); color:var(--np); padding:2px 10px; border-radius:999px; border:1px solid var(--border); }
+
+    /* SKILLS GAP CHART */
+    .chart-wrap { height:260px; position:relative; }
+
+    /* RESOURCES */
+    .resources-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:10px; }
+    .res-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:1rem; transition:all .3s; }
+    .res-card:hover { border-color:var(--nb); transform:translateY(-3px); }
+    .res-type { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:var(--nb); margin-bottom:5px; }
+    .res-name { font-size:13px; font-weight:600; color:#fff; margin-bottom:3px; }
+    .res-desc { font-size:11px; color:var(--muted); line-height:1.5; }
+
+    /* TIPS */
+    .tips-list { list-style:none; display:flex; flex-direction:column; gap:10px; }
+    .tip-item { display:flex; gap:10px; align-items:flex-start; font-size:13px; color:#bbb; line-height:1.7; padding:10px 12px; background:rgba(255,255,255,.02); border-radius:10px; border-left:2px solid var(--np); }
+    .tip-icon { font-size:16px; flex-shrink:0; }
+
+    /* ACTION BTNS */
+    .action-row { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:1.5rem; }
+    .btn-restart { padding:11px 26px; border-radius:10px; background:var(--card); border:1px solid var(--border); color:var(--muted); font-size:14px; font-weight:600; cursor:pointer; transition:all .2s; }
+    .btn-restart:hover { border-color:var(--npk); color:var(--npk); }
+    .btn-download { padding:11px 26px; border-radius:10px; background:linear-gradient(135deg,#7b5de8,#d4537e); color:#fff; font-size:14px; font-weight:700; border:none; cursor:pointer; box-shadow:0 0 18px rgba(180,139,255,.3); transition:all .3s; }
+    .btn-download:hover { transform:translateY(-2px); box-shadow:0 0 28px rgba(180,139,255,.5); }
+
+    /* SECTION HEADER */
+    .sec-hdr { font-size:16px; font-weight:800; color:#fff; margin-bottom:1rem; display:flex; align-items:center; gap:8px; }
+    .sec-hdr::after { content:''; flex:1; height:1px; background:linear-gradient(90deg,var(--border),transparent); }
+
+    footer { position:relative; z-index:1; text-align:center; padding:1.5rem; font-size:12px; color:var(--muted); border-top:1px solid var(--border); }
+    footer span { color:var(--np); }
+
+    @media print {
+      #galaxy-canvas, header .author-tag, .action-row, .progress-wrap { display:none; }
+      body { background:#fff; color:#000; }
+      .card { border:1px solid #ddd; }
+    }
+  </style>
+</head>
+<body>
+<canvas id="galaxy-canvas"></canvas>
+
+<header>
+  <h1>🔮 AI Career Path Advisor</h1>
+  <p>Answer a few questions — AI builds your personalised career roadmap</p>
+  <span class="author-tag">Built by Dhivyasri Ravi</span>
+</header>
+
+<div class="main">
+
+  <!-- PROGRESS -->
+  <div class="progress-wrap" id="progress-wrap">
+    <div class="progress-steps" id="progress-steps"></div>
+    <div class="progress-bar-track"><div class="progress-bar-fill" id="progress-fill" style="width:0%"></div></div>
+  </div>
+
+  <!-- QUIZ SCREEN -->
+  <div id="quiz-screen"></div>
+
+  <!-- LOADING -->
+  <div id="loading-screen">
+    <div class="loader-orb"></div>
+    <h2>Building Your Career Roadmap...</h2>
+    <p>AI is analysing your profile and creating a personalised plan</p>
+    <div class="loading-steps">
+      <div class="lstep active" id="ls1">🔍 Analysing your skills & interests...</div>
+      <div class="lstep" id="ls2">🎯 Matching career roles to your profile...</div>
+      <div class="lstep" id="ls3">🗺️ Building your personalised roadmap...</div>
+      <div class="lstep" id="ls4">📚 Curating learning resources...</div>
+      <div class="lstep" id="ls5">✨ Finalising your career plan...</div>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="results-screen"></div>
+
+</div>
+
+<footer><p>Built with Groq AI (LLaMA 3.3 70B) &nbsp;·&nbsp; <span>Dhivyasri Ravi</span> &copy; 2026</p></footer>
+
+<script>
+// ── API KEY ──
+const GROQ_KEY = 'YOUR_GROQ_API_KEY_HERE'; // paste gsk_... here
+
+// ── GALAXY ──
+const canvas=document.getElementById('galaxy-canvas'),ctx=canvas.getContext('2d');
+let stars=[],W,H;
+function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight;}
+function initStars(){stars=Array.from({length:200},()=>({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.5+.3,speed:Math.random()*.3+.05,tw:Math.random()*Math.PI*2,col:['180,139,255','255,110,180','94,223,255'][Math.floor(Math.random()*3)]}));}
+function drawStars(){ctx.clearRect(0,0,W,H);stars.forEach(s=>{s.tw+=.02;s.y-=s.speed;if(s.y<-2){s.y=H+2;s.x=Math.random()*W;}const op=.2+Math.abs(Math.sin(s.tw))*.5;ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fillStyle=`rgba(${s.col},${op})`;ctx.fill();});requestAnimationFrame(drawStars);}
+resize();initStars();drawStars();
+window.addEventListener('resize',()=>{resize();initStars();});
+
+// ── QUIZ DATA ──
+const STEPS = [
+  {
+    id:'name', type:'text', label:'Step 1 · About You',
+    title:'What is your name?',
+    placeholder:'Enter your full name...'
+  },
+  {
+    id:'education', type:'single', label:'Step 2 · Education',
+    title:'What is your current education level?',
+    options:['🎓 Currently in College (UG)','🎓 Recently Graduated (UG)','📚 Pursuing Post Graduation','🏫 Higher Secondary (12th)','💼 Working Professional']
+  },
+  {
+    id:'field', type:'single', label:'Step 3 · Your Field',
+    title:'What is your field of study or work?',
+    options:['💻 Computer Science / IT','⚡ Electronics / EEE','⚙️ Mechanical Engineering','📊 Business / MBA','🎨 Design / Arts','🔬 Science / Research','📱 Other Tech Field']
+  },
+  {
+    id:'skills', type:'multi', label:'Step 4 · Your Skills',
+    title:'Which of these do you know? (Select all that apply)',
+    options:['🌐 HTML / CSS / JS','⚛️ React / Angular / Vue','🐍 Python','☕ Java','🗄️ SQL / Databases','📱 Android / iOS Dev','🤖 Machine Learning / AI','☁️ Cloud (AWS/GCP/Azure)','🎨 UI/UX Design','📊 Data Analysis','🔌 Node.js / PHP / Backend','🛠️ Git / DevOps']
+  },
+  {
+    id:'interests', type:'multi', label:'Step 5 · Interests',
+    title:'What areas excite you most? (Select up to 3)',
+    options:['🤖 Artificial Intelligence','🌐 Web Development','📱 Mobile Apps','☁️ Cloud & DevOps','🔐 Cybersecurity','📊 Data Science','🎮 Game Development','🎨 UI/UX Design','🚀 Startup / Entrepreneurship','🔬 Research & Academia']
+  },
+  {
+    id:'experience', type:'single', label:'Step 6 · Experience',
+    title:'How much work / project experience do you have?',
+    options:['🌱 None yet — just starting','📁 1-2 personal projects','💼 Internship experience','🏢 1-2 years work experience','🚀 3+ years experience']
+  },
+  {
+    id:'goal', type:'single', label:'Step 7 · Your Goal',
+    title:'What is your primary career goal?',
+    options:['💰 Get a high-paying job ASAP','🏢 Join a top tech company (FAANG/MNC)','🚀 Build my own startup','🎓 Pursue higher studies (MS/MTech)','🔬 Do research / PhD','🌍 Work abroad','🏡 Good job in India with work-life balance']
+  },
+  {
+    id:'timeline', type:'single', label:'Step 8 · Timeline',
+    title:'When do you want to achieve your career goal?',
+    options:['⚡ Within 3 months','📅 Within 6 months','🗓️ Within 1 year','📆 1-2 years','🌱 2-3 years — I want to build strong']
+  },
+  {
+    id:'challenge', type:'single', label:'Step 9 · Your Challenge',
+    title:'What is your biggest challenge right now?',
+    options:['😕 Don\'t know where to start','📚 Too many options — confused','⏰ No time to learn','💸 No money for courses','🤝 No guidance / mentorship','💪 Lack of confidence','🔧 Need more projects / portfolio']
+  },
+  {
+    id:'extra', type:'textarea', label:'Step 10 · Anything Else',
+    title:'Anything else you want AI to know about you?',
+    placeholder:'E.g. I know basic Python, I love building websites, I want to work in AI, I am from a rural area... (optional)'
+  }
+];
+
+let answers = {};
+let currentStep = 0;
+let skillsChart = null;
+
+// ── RENDER PROGRESS ──
+function renderProgress() {
+  const steps = document.getElementById('progress-steps');
+  const fill  = document.getElementById('progress-fill');
+  const labels = ['You','Study','Field','Skills','Interests','Experience','Goal','Timeline','Challenge','More'];
+  steps.innerHTML = labels.map((l,i) => {
+    const cls = i < currentStep ? 'done' : i === currentStep ? 'active' : '';
+    return `<div class="pstep">
+      <div class="pstep-dot ${cls}">${i < currentStep ? '✓' : i+1}</div>
+      <div class="pstep-label ${cls === 'active' ? 'active' : ''}">${l}</div>
+    </div>`;
+  }).join('');
+  fill.style.width = (currentStep / (STEPS.length - 1) * 100) + '%';
+}
+
+// ── RENDER QUIZ STEP ──
+function renderStep() {
+  renderProgress();
+  const step = STEPS[currentStep];
+  const saved = answers[step.id];
+  const quiz  = document.getElementById('quiz-screen');
+
+  let inputHTML = '';
+  if (step.type === 'text') {
+    inputHTML = `<input class="text-input" id="q-input" type="text" placeholder="${step.placeholder}" value="${saved||''}" onkeydown="if(event.key==='Enter')nextStep()"/>`;
+  } else if (step.type === 'textarea') {
+    inputHTML = `<textarea class="text-input" id="q-input" placeholder="${step.placeholder}">${saved||''}</textarea>`;
+  } else if (step.type === 'single') {
+    inputHTML = `<div class="options-grid">${step.options.map(o =>
+      `<button class="opt-btn ${saved===o?'selected':''}" onclick="selectSingle(this,'${step.id}','${o.replace(/'/g,"\\'")}')"><span>${o}</span></button>`
+    ).join('')}</div>`;
+  } else if (step.type === 'multi') {
+    const sel = saved || [];
+    inputHTML = `<div class="options-grid">${step.options.map(o =>
+      `<button class="opt-btn ${sel.includes(o)?'multi-selected':''}" onclick="toggleMulti(this,'${step.id}','${o.replace(/'/g,"\\'")}')"><span>${o}</span></button>`
+    ).join('')}</div>`;
+  }
+
+  quiz.innerHTML = `
+    <div class="card">
+      <div class="q-label">${step.label}</div>
+      <div class="q-title">${step.title}</div>
+      ${step.type==='multi'?'<p style="font-size:12px;color:var(--muted);margin-bottom:1rem">Select all that apply</p>':''}
+      ${inputHTML}
+      <div class="nav-btns">
+        ${currentStep>0?`<button class="btn-back" onclick="prevStep()">← Back</button>`:''}
+        <button class="btn-next" id="btn-next" onclick="nextStep()">${currentStep===STEPS.length-1?'🚀 Build My Roadmap':'Next →'}</button>
+      </div>
+    </div>`;
+}
+
+function selectSingle(btn, id, val) {
+  document.querySelectorAll('.opt-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  answers[id] = val;
+}
+
+function toggleMulti(btn, id, val) {
+  if (!answers[id]) answers[id] = [];
+  if (answers[id].includes(val)) {
+    answers[id] = answers[id].filter(v => v !== val);
+    btn.classList.remove('multi-selected');
+  } else {
+    answers[id].push(val);
+    btn.classList.add('multi-selected');
+  }
+}
+
+function nextStep() {
+  const step = STEPS[currentStep];
+  if (step.type === 'text' || step.type === 'textarea') {
+    const val = document.getElementById('q-input')?.value?.trim();
+    if (step.id === 'name' && !val) { alert('Please enter your name!'); return; }
+    answers[step.id] = val || '';
+  } else if (step.type === 'single' && !answers[step.id]) {
+    alert('Please select an option!'); return;
+  } else if (step.type === 'multi' && (!answers[step.id] || !answers[step.id].length)) {
+    alert('Please select at least one option!'); return;
+  }
+  if (currentStep < STEPS.length - 1) {
+    currentStep++;
+    renderStep();
+    window.scrollTo({top:0,behavior:'smooth'});
+  } else {
+    startAnalysis();
+  }
+}
+
+function prevStep() {
+  if (currentStep > 0) { currentStep--; renderStep(); window.scrollTo({top:0,behavior:'smooth'}); }
+}
+
+// ── ANALYSIS ──
+async function startAnalysis() {
+  document.getElementById('quiz-screen').style.display = 'none';
+  document.getElementById('progress-wrap').style.display = 'none';
+  document.getElementById('loading-screen').style.display = 'block';
+  window.scrollTo({top:0,behavior:'smooth'});
+
+  // Animate loading steps
+  const lSteps = ['ls1','ls2','ls3','ls4','ls5'];
+  let li = 0;
+  const lInterval = setInterval(() => {
+    if (li > 0) { document.getElementById(lSteps[li-1]).className = 'lstep done'; document.getElementById(lSteps[li-1]).prepend(document.createTextNode('✅ ')); }
+    if (li < lSteps.length) { document.getElementById(lSteps[li]).className = 'lstep active'; li++; }
+    else clearInterval(lInterval);
+  }, 800);
+
+  if (!GROQ_KEY || GROQ_KEY === 'YOUR_GROQ_API_KEY_HERE') {
+    clearInterval(lInterval);
+    document.getElementById('loading-screen').style.display = 'none';
+    alert('❌ Please add your Groq API key in the code!\n\nFind: const GROQ_KEY = \'YOUR_GROQ_API_KEY_HERE\';\nReplace with your gsk_... key');
+    document.getElementById('quiz-screen').style.display = 'block';
+    document.getElementById('progress-wrap').style.display = 'block';
+    return;
+  }
+
+  const prompt = `You are an expert career counsellor and tech industry advisor. Based on this student's profile, generate a comprehensive, personalised career roadmap.
+
+STUDENT PROFILE:
+Name: ${answers.name || 'Student'}
+Education: ${answers.education}
+Field: ${answers.field}
+Current Skills: ${(answers.skills||[]).join(', ')}
+Interests: ${(answers.interests||[]).join(', ')}
+Experience Level: ${answers.experience}
+Career Goal: ${answers.goal}
+Timeline: ${answers.timeline}
+Biggest Challenge: ${answers.challenge}
+Additional Info: ${answers.extra || 'None'}
+
+Return ONLY a valid JSON object (no markdown, no explanation, start with {):
+{
+  "name": "student name",
+  "headline": "2-line motivational headline for their career",
+  "summary": "3-4 sentence personalised career summary",
+  "top_roles": [
+    {"emoji":"💻","name":"Role Name","match":"95% match","desc":"Short role description","salary":"₹X-Y LPA"}
+  ],
+  "roadmap": [
+    {
+      "phase": "Phase 1 · Months 1-3",
+      "title": "Foundation Building",
+      "duration": "3 months",
+      "items": ["Action item 1","Action item 2","Action item 3","Action item 4"]
+    }
+  ],
+  "skills_gap": {
+    "labels": ["Skill1","Skill2","Skill3","Skill4","Skill5","Skill6"],
+    "current": [70,40,60,30,50,20],
+    "required": [90,80,85,70,75,60]
+  },
+  "resources": [
+    {"type":"Course","name":"Resource Name","desc":"Short description"}
+  ],
+  "tips": ["Tip 1","Tip 2","Tip 3","Tip 4","Tip 5"],
+  "motivational_quote": "An inspiring personalised quote for this student"
+}
+
+Rules:
+- Give exactly 4 top roles, 4 roadmap phases, 6 skills in gap analysis, 6 resources, 5 tips
+- Make everything highly specific to their profile — not generic
+- Skills gap current/required values must be 0-100
+- Salary in Indian Rupees (LPA format)
+- Resources should be real platforms (Udemy, Coursera, YouTube, freeCodeCamp, LeetCode etc.)`;
+
+  try {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+GROQ_KEY},
+      body: JSON.stringify({
+        model:'llama-3.3-70b-versatile', max_tokens:2500, temperature:0.4,
+        messages:[
+          {role:'system',content:'You are a career advisor. Return only valid JSON. No markdown, no explanation. Start with { and end with }.'},
+          {role:'user',content:prompt}
+        ]
+      })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    let raw = data.choices[0].message.content.trim();
+    raw = raw.replace(/```json|```/g,'').trim();
+    const fi = raw.indexOf('{'), la = raw.lastIndexOf('}');
+    const result = JSON.parse(raw.slice(fi, la+1));
+    clearInterval(lInterval);
+    setTimeout(() => {
+      document.getElementById('loading-screen').style.display = 'none';
+      renderResults(result);
+    }, 500);
+  } catch(e) {
+    clearInterval(lInterval);
+    document.getElementById('loading-screen').style.display = 'none';
+    alert('Error: ' + e.message);
+    document.getElementById('quiz-screen').style.display = 'block';
+    document.getElementById('progress-wrap').style.display = 'block';
+  }
+}
+
+// ── RENDER RESULTS ──
+function renderResults(r) {
+  const el = document.getElementById('results-screen');
+  el.style.display = 'block';
+  window.scrollTo({top:0,behavior:'smooth'});
+
+  // Roles HTML
+  const rolesHTML = (r.top_roles||[]).map((role,i) => `
+    <div class="role-card ${i===0?'top':''}">
+      <div class="role-emoji">${role.emoji}</div>
+      <div class="role-name">${role.name}</div>
+      <div class="role-match">${role.match}</div>
+      <div class="role-desc">${role.desc}</div>
+      <div class="role-salary">💰 ${role.salary}</div>
+    </div>`).join('');
+
+  // Roadmap HTML
+  const roadmapHTML = (r.roadmap||[]).map(phase => `
+    <div class="rm-phase">
+      <div class="rm-dot"></div>
+      <div class="rm-card">
+        <div class="rm-phase-label">${phase.phase}</div>
+        <div class="rm-title">${phase.title}</div>
+        <ul class="rm-items">${(phase.items||[]).map(item=>`<li>${item}</li>`).join('')}</ul>
+        <span class="rm-duration">⏱ ${phase.duration}</span>
+      </div>
+    </div>`).join('');
+
+  // Resources HTML
+  const resHTML = (r.resources||[]).map(res => `
+    <div class="res-card">
+      <div class="res-type">${res.type}</div>
+      <div class="res-name">${res.name}</div>
+      <div class="res-desc">${res.desc}</div>
+    </div>`).join('');
+
+  // Tips HTML
+  const tipsHTML = (r.tips||[]).map(tip => `
+    <li class="tip-item"><span class="tip-icon">💡</span><span>${tip}</span></li>`).join('');
+
+  el.innerHTML = `
+    <div class="result-hero card">
+      <h2>🎯 ${r.headline || 'Your Career Roadmap is Ready!'}</h2>
+      <p>${r.summary || ''}</p>
+      <div style="margin-top:1rem;padding:.8rem 1.2rem;background:rgba(180,139,255,.08);border-radius:10px;border-left:3px solid var(--np);">
+        <span style="font-size:13px;color:var(--np);font-style:italic">"${r.motivational_quote || 'Your journey starts now!'}"</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="sec-hdr">💼 Best Career Roles for You</div>
+      <div class="roles-grid">${rolesHTML}</div>
+    </div>
+
+    <div class="card">
+      <div class="sec-hdr">🗺️ Your Personalised Roadmap</div>
+      <div class="roadmap">${roadmapHTML}</div>
+    </div>
+
+    <div class="card">
+      <div class="sec-hdr">📊 Skills Gap Analysis</div>
+      <div class="chart-wrap"><canvas id="skills-chart"></canvas></div>
+    </div>
+
+    <div class="card">
+      <div class="sec-hdr">📚 Recommended Resources</div>
+      <div class="resources-grid">${resHTML}</div>
+    </div>
+
+    <div class="card">
+      <div class="sec-hdr">⚡ Pro Tips for ${r.name || 'You'}</div>
+      <ul class="tips-list">${tipsHTML}</ul>
+    </div>
+
+    <div class="action-row">
+      <button class="btn-restart" onclick="restartQuiz()">🔄 Retake Quiz</button>
+      <button class="btn-download" onclick="window.print()">🖨️ Print / Save as PDF</button>
+    </div>`;
+
+  // Render chart after DOM update
+  setTimeout(() => renderSkillsChart(r.skills_gap), 100);
+}
+
+function renderSkillsChart(gap) {
+  if (!gap) return;
+  if (skillsChart) skillsChart.destroy();
+  skillsChart = new Chart(document.getElementById('skills-chart'), {
+    type:'bar',
+    data:{
+      labels: gap.labels||[],
+      datasets:[
+        { label:'Your Current Level', data:gap.current||[], backgroundColor:'rgba(180,139,255,0.7)', borderRadius:6, borderSkipped:false },
+        { label:'Required Level',     data:gap.required||[], backgroundColor:'rgba(255,110,180,0.5)', borderRadius:6, borderSkipped:false }
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ labels:{ color:'#aaa', font:{size:12} } } },
+      scales:{
+        x:{ ticks:{color:'#888',font:{size:11}}, grid:{color:'rgba(255,255,255,0.04)'} },
+        y:{ min:0, max:100, ticks:{color:'#888',font:{size:11},stepSize:20}, grid:{color:'rgba(255,255,255,0.04)'} }
+      }
+    }
+  });
+}
+
+function restartQuiz() {
+  answers = {}; currentStep = 0;
+  document.getElementById('results-screen').style.display  = 'none';
+  document.getElementById('quiz-screen').style.display     = 'block';
+  document.getElementById('progress-wrap').style.display   = 'block';
+  renderStep();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ── INIT ──
+renderStep();
+</script>
+</body>
+</html>
